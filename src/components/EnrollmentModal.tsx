@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { BookOpen, CheckCircle } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { useStudentLevel } from "@/contexts/StudentLevelContext";
 
 interface EnrollmentModalProps {
   isOpen: boolean;
@@ -31,14 +33,21 @@ const EnrollmentModal = ({ isOpen, onClose, course }: EnrollmentModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: "",
+    firstName: "",
+    lastName: "",
     email: "",
-    age: "",
     phone: "",
-    learningStyle: "",
-    motivation: "",
+    age: "",
+    comment: "",
     agreeTerms: false,
   });
+  const navigate = useNavigate();
+  const { studentLevel } = useStudentLevel();
+
+  console.log(
+    "EnrollmentModal received studentLevel (from context):",
+    studentLevel
+  );
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({
@@ -61,8 +70,40 @@ const EnrollmentModal = ({ isOpen, onClose, course }: EnrollmentModalProps) => {
 
     setIsSubmitting(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // 1. Check if already enrolled
+      const checkRes = await fetch("/api/check-enrollment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          courseId: course.id,
+        }),
+      });
+      const checkData = await checkRes.json();
+      if (checkData.enrolled) {
+        setIsSubmitting(false);
+        toast({
+          title: "Already Enrolled",
+          description: "You are already enrolled in this course.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // 2. Proceed with enrollment
+      const response = await fetch("/api/enroll", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          courseId: course.id,
+          studentLevel,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Enrollment failed");
+
       setIsSubmitting(false);
       setIsSuccess(true);
 
@@ -71,21 +112,27 @@ const EnrollmentModal = ({ isOpen, onClose, course }: EnrollmentModalProps) => {
         description: `You've been enrolled in ${course?.title}. Check your email for next steps.`,
       });
 
-      // Reset form after 3 seconds and close modal
       setTimeout(() => {
         setIsSuccess(false);
         setFormData({
-          fullName: "",
+          firstName: "",
+          lastName: "",
           email: "",
-          age: "",
           phone: "",
-          learningStyle: "",
-          motivation: "",
+          age: "",
+          comment: "",
           agreeTerms: false,
         });
-        onClose();
-      }, 3000);
-    }, 2000);
+        navigate(`/`);
+      }, 5000);
+    } catch (err) {
+      setIsSubmitting(false);
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    }
   };
 
   if (!course) return null;
@@ -134,19 +181,34 @@ const EnrollmentModal = ({ isOpen, onClose, course }: EnrollmentModalProps) => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="fullName">Full Name *</Label>
+                <Label htmlFor="firstName">First Name *</Label>
                 <Input
-                  id="fullName"
-                  value={formData.fullName}
+                  id="firstName"
+                  value={formData.firstName}
                   onChange={(e) =>
-                    handleInputChange("fullName", e.target.value)
+                    handleInputChange("firstName", e.target.value)
                   }
-                  placeholder="Enter your full name"
+                  placeholder="Enter your first name"
                   required
                   className="mt-1"
                 />
               </div>
+              <div>
+                <Label htmlFor="lastName">Last Name *</Label>
+                <Input
+                  id="lastName"
+                  value={formData.lastName}
+                  onChange={(e) =>
+                    handleInputChange("lastName", e.target.value)
+                  }
+                  placeholder="Enter your last name"
+                  required
+                  className="mt-1"
+                />
+              </div>
+            </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="email">Email Address *</Label>
                 <Input
@@ -159,9 +221,18 @@ const EnrollmentModal = ({ isOpen, onClose, course }: EnrollmentModalProps) => {
                   className="mt-1"
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="phone">Phone Number *</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange("phone", e.target.value)}
+                  placeholder="+1 (555) 123-4567"
+                  required
+                  className="mt-1"
+                />
+              </div>
               <div>
                 <Label htmlFor="age">Age *</Label>
                 <Input
@@ -176,69 +247,15 @@ const EnrollmentModal = ({ isOpen, onClose, course }: EnrollmentModalProps) => {
                   className="mt-1"
                 />
               </div>
-
-              <div>
-                <Label htmlFor="phone">Phone Number *</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange("phone", e.target.value)}
-                  placeholder="+1 (555) 123-4567"
-                  required
-                  className="mt-1"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Learning Preferences */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Learning Preferences
-            </h3>
-
-            <div>
-              <Label htmlFor="learningStyle">Preferred Learning Style *</Label>
-              <Select
-                value={formData.learningStyle}
-                onValueChange={(value) =>
-                  handleInputChange("learningStyle", value)
-                }
-                required
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select your preferred learning style" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="visual">
-                    Visual (diagrams, charts, images)
-                  </SelectItem>
-                  <SelectItem value="audio">
-                    Audio (lectures, discussions, music)
-                  </SelectItem>
-                  <SelectItem value="reading">
-                    Reading (text, articles, books)
-                  </SelectItem>
-                  <SelectItem value="kinesthetic">
-                    Kinesthetic (hands-on, practice, movement)
-                  </SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             <div>
-              <Label htmlFor="motivation">
-                What motivates you to take this course? *
-              </Label>
+              <Label htmlFor="comment">Any Comments ?</Label>
               <Textarea
-                id="motivation"
-                value={formData.motivation}
-                onChange={(e) =>
-                  handleInputChange("motivation", e.target.value)
-                }
-                placeholder="Tell us about your goals and what you hope to achieve..."
-                required
+                id="comment"
+                value={formData.comment}
+                onChange={(e) => handleInputChange("comment", e.target.value)}
+                placeholder="Add any comments or questions here..."
                 rows={4}
                 className="mt-1"
               />
@@ -258,13 +275,23 @@ const EnrollmentModal = ({ isOpen, onClose, course }: EnrollmentModalProps) => {
               />
               <Label htmlFor="terms" className="text-sm leading-relaxed">
                 I agree to the{" "}
-                <button type="button" className="text-blue-600 hover:underline">
+                <Link
+                  to="/terms-and-conditions"
+                  className="text-blue-600 hover:underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   Terms and Conditions
-                </button>{" "}
+                </Link>{" "}
                 and{" "}
-                <button type="button" className="text-blue-600 hover:underline">
+                <Link
+                  to="/privacy-policy"
+                  className="text-blue-600 hover:underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   Privacy Policy
-                </button>
+                </Link>
                 . I understand that course fees may apply and will be
                 communicated before payment.
               </Label>

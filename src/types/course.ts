@@ -14,7 +14,7 @@ export interface Course {
   attachments?: { name: string; url: string }[];
   department: string;
   status: "open" | "closed";
-  waitlist?: number;
+  waitlist: number;
   startTime?: string;
   endTime?: string;
   term: string;

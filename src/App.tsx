@@ -8,6 +8,8 @@ import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import CourseRecommendation from "./pages/CourseRecommendation";
 import CourseDetailsPage from "@/pages/CourseDetailsPage";
+import TermsAndConditions from "./pages/TermsAndConditions";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +25,11 @@ const App = () => (
           <Route path="/admin/:section" element={<Admin />} />
           <Route path="/courses" element={<CourseRecommendation />} />
           <Route path="/courses/:id" element={<CourseDetailsPage />} />
+          <Route
+            path="/terms-and-conditions"
+            element={<TermsAndConditions />}
+          />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

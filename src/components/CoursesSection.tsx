@@ -3,7 +3,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Clock, Users, Plus, Eye } from "lucide-react";
+import {
+  Search,
+  Clock,
+  Users,
+  Plus,
+  Eye,
+  Infinity,
+  RefreshCw,
+} from "lucide-react";
 import CourseDetails from "./CourseDetails";
 import CourseForm from "./CourseForm";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +29,7 @@ const CoursesSection = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
 
   // Fetch courses from backend
@@ -33,9 +42,13 @@ const CoursesSection = () => {
 
   // Utility to refresh courses after add/edit/delete
   const refreshCourses = () => {
+    setIsRefreshing(true);
     fetch("/api/courses")
       .then((res) => res.json())
-      .then((data) => setCourses(data));
+      .then((data) => setCourses(data))
+      .finally(() => {
+        setTimeout(() => setIsRefreshing(false), 500);
+      });
   };
 
   const handleSearch = (term: string) => {
@@ -45,14 +58,22 @@ const CoursesSection = () => {
   };
 
   const filteredCourses = useMemo(() => {
-    return courses.filter((course) => {
-      const search = searchTerm.toLowerCase();
-      const matchesTitle = course.title.toLowerCase().includes(search);
-      const matchesId = course.id?.toString().includes(searchTerm);
-      const matchesLevel =
-        selectedLevel === "All" || course.level === selectedLevel;
-      return (matchesTitle || matchesId) && matchesLevel;
-    });
+    const levelOrder = { Beginner: 1, Intermediate: 2, Advanced: 3 };
+
+    return courses
+      .filter((course) => {
+        const search = searchTerm.toLowerCase();
+        const matchesTitle = course.title.toLowerCase().includes(search);
+        const matchesId = course.id?.toString().includes(searchTerm);
+        const matchesLevel =
+          selectedLevel === "All" || course.level === selectedLevel;
+        return (matchesTitle || matchesId) && matchesLevel;
+      })
+      .sort((a, b) => {
+        const levelA = levelOrder[a.level as keyof typeof levelOrder] || 0;
+        const levelB = levelOrder[b.level as keyof typeof levelOrder] || 0;
+        return levelA - levelB;
+      });
   }, [searchTerm, selectedLevel, courses]);
 
   const getLevelColor = (level: string) => {
@@ -69,8 +90,18 @@ const CoursesSection = () => {
   };
 
   const handleViewCourse = (course: Course) => {
-    setSelectedCourse(course);
-    setViewMode("details");
+    // Refresh course data before viewing details to get latest waitlist/student counts
+    fetch(`/api/courses/${course.id}`)
+      .then((res) => res.json())
+      .then((updatedCourse) => {
+        setSelectedCourse(updatedCourse);
+        setViewMode("details");
+      })
+      .catch(() => {
+        // Fallback to original course data if fetch fails
+        setSelectedCourse(course);
+        setViewMode("details");
+      });
   };
 
   const handleAddCourse = () => {
@@ -126,6 +157,8 @@ const CoursesSection = () => {
   };
 
   const handleBack = () => {
+    // Refresh courses when returning to list view to get latest data
+    refreshCourses();
     setViewMode("list");
     setSelectedCourse(null);
     setEditingCourse(null);
@@ -161,13 +194,26 @@ const CoursesSection = () => {
             Manage and view all available courses
           </p>
         </div>
-        <Button
-          onClick={handleAddCourse}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Course
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            onClick={refreshCourses}
+            variant="outline"
+            className="flex items-center gap-2"
+            disabled={isRefreshing}
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+            />
+            {isRefreshing ? "Refreshing..." : "Refresh"}
+          </Button>
+          <Button
+            onClick={handleAddCourse}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Course
+          </Button>
+        </div>
       </div>
 
       {/* Modern Filters */}
@@ -269,10 +315,14 @@ const CoursesSection = () => {
                     </div>
                     <div className="flex items-center">
                       <Users className="h-4 w-4 mr-2 text-gray-400" />
-                      {course.students}
-                      {course.maxStudents && (
+                      {course.students || 0}
+                      {course.maxStudents ? (
                         <span className="ml-1 text-xs text-gray-400">
                           / {course.maxStudents}
+                        </span>
+                      ) : (
+                        <span className="ml-1 text-xs text-gray-400 flex items-center">
+                          / <Infinity className="h-3 w-3" />
                         </span>
                       )}
                     </div>
@@ -291,13 +341,20 @@ const CoursesSection = () => {
                       {course.status === "open" ? "🟢 Open" : "🔴 Closed"}
                     </span>
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {course.location && (
-                      <span>Location: {course.location}</span>
-                    )}
-                    {course.meetingTime && (
-                      <span className="ml-2">({course.meetingTime})</span>
-                    )}
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <div>
+                      {course.location && (
+                        <span>Location: {course.location}</span>
+                      )}
+                      {course.meetingTime && (
+                        <span className="ml-2">({course.meetingTime})</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-orange-600 font-medium">
+                        Waitlist: {course.waitlist || 0}
+                      </span>
+                    </div>
                   </div>
                   <div className="pt-2">
                     <Button

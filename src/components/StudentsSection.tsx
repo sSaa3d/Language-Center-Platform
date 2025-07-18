@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, RefreshCw } from "lucide-react";
 import StudentDetails from "./StudentDetails";
 
 interface Course {
@@ -19,188 +20,35 @@ interface Student {
   lastName: string;
   email: string;
   phone: string;
-  status: "pending" | "approved" | "rejected";
   enrolledCourses: Course[];
-  placementTestLevel: "Beginner" | "Intermediate" | "Advanced";
+  studentLevel: string;
+  status: "active" | "inactive";
   enrollmentDate: string; // ISO date string
   approvedDate?: string; // ISO date string, only if approved
+  enrolledCourseIds: number[];
 }
 
-const mockStudents: Student[] = [
-  {
-    id: 1,
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@email.com",
-    phone: "(555) 123-4567",
-    status: "approved",
-    placementTestLevel: "Beginner",
-    enrollmentDate: "2024-06-01",
-    approvedDate: "2024-06-03",
-    enrolledCourses: [
-      {
-        id: 1,
-        title: "React Fundamentals",
-        category: "Beginner",
-        duration: "4 weeks",
-        status: "active",
-      },
-      {
-        id: 2,
-        title: "JavaScript Basics",
-        category: "Beginner",
-        duration: "3 weeks",
-        status: "completed",
-      },
-    ],
-  },
-  {
-    id: 2,
-    firstName: "Jane",
-    lastName: "Smith",
-    email: "jane.smith@email.com",
-    phone: "(555) 234-5678",
-    status: "pending",
-    placementTestLevel: "Intermediate",
-    enrollmentDate: "2024-06-05",
-    enrolledCourses: [
-      {
-        id: 3,
-        title: "Advanced JavaScript",
-        category: "Advanced",
-        duration: "6 weeks",
-        status: "pending",
-      },
-    ],
-  },
-  {
-    id: 3,
-    firstName: "Mike",
-    lastName: "Johnson",
-    email: "mike.j@email.com",
-    phone: "(555) 345-6789",
-    status: "rejected",
-    placementTestLevel: "Beginner",
-    enrollmentDate: "2024-06-10",
-    enrolledCourses: [],
-  },
-  {
-    id: 4,
-    firstName: "Sarah",
-    lastName: "Wilson",
-    email: "sarah.w@email.com",
-    phone: "(555) 456-7890",
-    status: "approved",
-    placementTestLevel: "Advanced",
-    enrollmentDate: "2024-06-15",
-    approvedDate: "2024-06-17",
-    enrolledCourses: [
-      {
-        id: 4,
-        title: "Python Basics",
-        category: "Beginner",
-        duration: "5 weeks",
-        status: "active",
-      },
-      {
-        id: 5,
-        title: "Data Structures",
-        category: "Intermediate",
-        duration: "8 weeks",
-        status: "active",
-      },
-    ],
-  },
-  {
-    id: 5,
-    firstName: "David",
-    lastName: "Brown",
-    email: "david.brown@email.com",
-    phone: "(555) 567-8901",
-    status: "pending",
-    placementTestLevel: "Intermediate",
-    enrollmentDate: "2024-06-20",
-    enrolledCourses: [
-      {
-        id: 6,
-        title: "Web Development",
-        category: "Intermediate",
-        duration: "12 weeks",
-        status: "pending",
-      },
-    ],
-  },
-  {
-    id: 6,
-    firstName: "Emily",
-    lastName: "Davis",
-    email: "emily.davis@email.com",
-    phone: "(555) 678-9012",
-    status: "approved",
-    placementTestLevel: "Advanced",
-    enrollmentDate: "2024-06-25",
-    approvedDate: "2024-06-27",
-    enrolledCourses: [
-      {
-        id: 7,
-        title: "UI/UX Design",
-        category: "Intermediate",
-        duration: "6 weeks",
-        status: "completed",
-      },
-      {
-        id: 8,
-        title: "Advanced CSS",
-        category: "Advanced",
-        duration: "4 weeks",
-        status: "active",
-      },
-    ],
-  },
-  {
-    id: 7,
-    firstName: "Chris",
-    lastName: "Miller",
-    email: "chris.m@email.com",
-    phone: "(555) 789-0123",
-    status: "rejected",
-    placementTestLevel: "Beginner",
-    enrollmentDate: "2024-07-01",
-    enrolledCourses: [],
-  },
-  {
-    id: 8,
-    firstName: "Lisa",
-    lastName: "Garcia",
-    email: "lisa.garcia@email.com",
-    phone: "(555) 890-1234",
-    status: "pending",
-    placementTestLevel: "Advanced",
-    enrollmentDate: "2024-07-05",
-    enrolledCourses: [
-      {
-        id: 9,
-        title: "Mobile Development",
-        category: "Advanced",
-        duration: "10 weeks",
-        status: "pending",
-      },
-    ],
-  },
-];
-
 const StudentsSection = () => {
+  const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/students")
+      .then((res) => res.json())
+      .then((data) =>
+        Array.isArray(data) ? setStudents(data) : setStudents([])
+      )
+      .catch(() => setStudents([]));
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "approved":
+      case "active":
         return "bg-green-100 text-green-800";
-      case "rejected":
-        return "bg-red-100 text-red-800";
+      case "inactive":
+        return "bg-gray-100 text-gray-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -214,16 +62,27 @@ const StudentsSection = () => {
     setSelectedStudent(null);
   };
 
+  const refreshStudents = () => {
+    setIsRefreshing(true);
+    fetch("/api/students")
+      .then((res) => res.json())
+      .then((data) =>
+        Array.isArray(data) ? setStudents(data) : setStudents([])
+      )
+      .catch(() => setStudents([]))
+      .finally(() => {
+        setTimeout(() => setIsRefreshing(false), 500);
+      });
+  };
+
   // Filter students by any attribute
-  const filteredStudents = mockStudents.filter((student) => {
+  const filteredStudents = students.filter((student) => {
     const search = searchTerm.toLowerCase();
     return (
       student.firstName.toLowerCase().includes(search) ||
       student.lastName.toLowerCase().includes(search) ||
       student.email.toLowerCase().includes(search) ||
       student.phone.toLowerCase().includes(search) ||
-      student.status.toLowerCase().includes(search) ||
-      student.placementTestLevel.toLowerCase().includes(search) ||
       student.enrollmentDate?.toLowerCase().includes(search) ||
       student.approvedDate?.toLowerCase().includes(search) ||
       student.enrolledCourses.some((course) =>
@@ -243,8 +102,25 @@ const StudentsSection = () => {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Students</h1>
-        <p className="text-gray-600">View and manage all registered students</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Students</h1>
+            <p className="text-gray-600">
+              View and manage all registered students
+            </p>
+          </div>
+          <Button
+            onClick={refreshStudents}
+            variant="outline"
+            className="flex items-center gap-2"
+            disabled={isRefreshing}
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+            />
+            {isRefreshing ? "Refreshing..." : "Refresh"}
+          </Button>
+        </div>
       </div>
 
       {/* Search Bar (styled like Courses) */}
@@ -269,6 +145,9 @@ const StudentsSection = () => {
               <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="text-left py-4 px-6 font-semibold text-gray-900">
+                    ID
+                  </th>
+                  <th className="text-left py-4 px-6 font-semibold text-gray-900">
                     First Name
                   </th>
                   <th className="text-left py-4 px-6 font-semibold text-gray-900">
@@ -279,9 +158,6 @@ const StudentsSection = () => {
                   </th>
                   <th className="text-left py-4 px-6 font-semibold text-gray-900">
                     Phone
-                  </th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-900">
-                    Status
                   </th>
                   <th className="text-left py-4 px-6 font-semibold text-gray-900">
                     Courses
@@ -310,6 +186,7 @@ const StudentsSection = () => {
                       }`}
                       onClick={() => handleStudentClick(student)}
                     >
+                      <td className="py-4 px-6 text-gray-900">{student.id}</td>
                       <td className="py-4 px-6 text-gray-900">
                         {student.firstName}
                       </td>
@@ -322,20 +199,11 @@ const StudentsSection = () => {
                       <td className="py-4 px-6 text-gray-600">
                         {student.phone}
                       </td>
-                      <td className="py-4 px-6">
-                        <Badge
-                          className={`${getStatusColor(
-                            student.status
-                          )} capitalize`}
-                        >
-                          {student.status}
-                        </Badge>
+                      <td className="py-4 px-6 text-gray-600">
+                        {(student.enrolledCourses ?? []).length} courses
                       </td>
                       <td className="py-4 px-6 text-gray-600">
-                        {student.enrolledCourses.length} courses
-                      </td>
-                      <td className="py-4 px-6 text-gray-600">
-                        {student.placementTestLevel}
+                        {student.studentLevel}
                       </td>
                     </tr>
                   ))

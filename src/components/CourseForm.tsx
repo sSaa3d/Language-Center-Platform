@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Eye, EyeOff, Paperclip } from "lucide-react";
 import { Course } from "../types/course";
 
 type Attachment = { name: string; url: string } | File;
@@ -151,7 +151,30 @@ const CourseForm = ({ course, onSave, onCancel }: CourseFormProps) => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Course Details</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Course Details</CardTitle>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setFormData({
+                    ...formData,
+                    status: formData.status === "open" ? "closed" : "open",
+                  })
+                }
+                className="flex items-center gap-2 px-3 py-2 rounded-md border border-gray-300 hover:bg-gray-50 transition-colors"
+              >
+                {formData.status === "open" ? (
+                  <Eye className="h-4 w-4 text-green-600" />
+                ) : (
+                  <EyeOff className="h-4 w-4 text-red-600" />
+                )}
+                <span className="text-sm font-medium">
+                  {formData.status === "open" ? "Open" : "Closed"}
+                </span>
+              </button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -292,25 +315,7 @@ const CourseForm = ({ course, onSave, onCancel }: CourseFormProps) => {
                   {/* Add more departments as needed */}
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Status *
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      status: e.target.value as "open" | "closed",
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="open">Open</option>
-                  <option value="closed">Closed</option>
-                </select>
-              </div>
+              <div></div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Start Time *
@@ -410,9 +415,10 @@ const CourseForm = ({ course, onSave, onCancel }: CourseFormProps) => {
                 <div className="flex items-center gap-3">
                   <label
                     htmlFor="attachments-upload"
-                    className="inline-block bg-black text-white px-4 py-2 rounded cursor-pointer hover:bg-gray-800 transition"
+                    className="inline-flex items-center gap-2 bg-gray-100 border border-gray-300 text-gray-800 px-4 py-2 rounded cursor-pointer hover:bg-gray-200 transition"
                   >
-                    Choose Files
+                    <Paperclip className="h-4 w-4" />
+                    <span>Upload Attachments</span>
                     <Input
                       id="attachments-upload"
                       type="file"

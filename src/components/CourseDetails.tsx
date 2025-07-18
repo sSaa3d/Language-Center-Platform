@@ -1,4 +1,12 @@
-import { ArrowLeft, Users, Clock, Calendar, Edit, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Users,
+  Clock,
+  Calendar,
+  Edit,
+  Trash2,
+  Infinity,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -80,7 +88,14 @@ const CourseDetails = ({
                 <label className="text-sm font-medium text-gray-500">
                   Status
                 </label>
-                <p className="text-gray-900 mt-1 capitalize">{course.status}</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="text-lg">
+                    {course.status === "open" ? "🟢" : "🔴"}
+                  </span>
+                  <span className="text-gray-900 capitalize">
+                    {course.status}
+                  </span>
+                </div>
               </div>
               <div className="mb-16"></div>
               <div>
@@ -104,14 +119,21 @@ const CourseDetails = ({
                 <label className="text-sm font-medium text-gray-500">
                   Students Enrolled
                 </label>
-                <p className="text-gray-900 mt-1">{course.students}</p>
+                <p className="text-gray-900 mt-1">{course.students || 0}</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">
                   Max Students
                 </label>
                 <p className="text-gray-900 mt-1">
-                  {course.maxStudents || "—"}
+                  {course.maxStudents ? (
+                    course.maxStudents
+                  ) : (
+                    <span className="flex items-center">
+                      <Infinity className="h-4 w-4 mr-1" />
+                      Unlimited
+                    </span>
+                  )}
                 </p>
               </div>
               <div>
@@ -227,7 +249,18 @@ const CourseDetails = ({
                   <Users className="h-4 w-4 mr-2" />
                   Students
                 </div>
-                <span className="font-medium">{course.students}</span>
+                <span className="font-medium">
+                  {course.students || 0}
+                  {course.maxStudents ? (
+                    <span className="text-gray-400 ml-1">
+                      / {course.maxStudents}
+                    </span>
+                  ) : (
+                    <span className="text-gray-400 ml-1 flex items-center">
+                      / <Infinity className="h-3 w-3 ml-1" />
+                    </span>
+                  )}
+                </span>
               </div>
               <div className="flex items-center justify-between"></div>
             </CardContent>

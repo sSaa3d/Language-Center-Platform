@@ -3,7 +3,14 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Clock, Star, ArrowRight, Sparkles } from "lucide-react";
+import {
+  BookOpen,
+  Clock,
+  Star,
+  ArrowRight,
+  Sparkles,
+  Infinity,
+} from "lucide-react";
 import EnrollmentModal from "@/components/EnrollmentModal";
 import {
   Carousel,
@@ -14,6 +21,7 @@ import {
 } from "@/components/ui/carousel";
 
 import { Users, MapPin, CalendarDays } from "lucide-react";
+import { useStudentLevel } from "@/contexts/StudentLevelContext";
 
 const CourseRecommendation = () => {
   const [searchParams] = useSearchParams();
@@ -27,6 +35,8 @@ const CourseRecommendation = () => {
   const level =
     rawLevel.charAt(0).toUpperCase() + rawLevel.slice(1).toLowerCase();
 
+  const { setStudentLevel } = useStudentLevel();
+
   useEffect(() => {
     fetch("/api/courses")
       .then((res) => res.json())
@@ -36,15 +46,24 @@ const CourseRecommendation = () => {
       });
   }, []);
 
+  useEffect(() => {
+    setStudentLevel(level);
+  }, [level, setStudentLevel]);
+
   const handleEnroll = (course: any) => {
     setSelectedCourse(course);
     setIsModalOpen(true);
   };
-  
-  // Filter recommended courses to only those matching the user's level
-  const recommendedCourses = courses.filter((course) => course.level === level);
 
-  const allLevels = Array.from(new Set(courses.map((c) => c.level)));
+  // Filter courses to only show "open" status courses
+  const openCourses = courses.filter((course) => course.status === "open");
+
+  // Filter recommended courses to only those matching the user's level and are open
+  const recommendedCourses = openCourses.filter(
+    (course) => course.level === level
+  );
+
+  const allLevels = Array.from(new Set(openCourses.map((c) => c.level)));
   const otherLevels = allLevels.filter((l) => l !== level);
 
   const CourseCard = ({
@@ -98,7 +117,14 @@ const CourseRecommendation = () => {
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <Users className="h-4 w-4" />
               <span>
-                {course.studentsEnrolled ?? 0}/{course.maxStudents ?? "—"}
+                {course.studentsEnrolled ?? 0}/
+                {course.maxStudents ? (
+                  course.maxStudents
+                ) : (
+                  <span className="flex items-center">
+                    <Infinity className="h-3 w-3" />
+                  </span>
+                )}
               </span>
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -134,7 +160,6 @@ const CourseRecommendation = () => {
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <BookOpen className="h-8 w-8 text-blue-600" />
-            <span className="text-2xl font-bold text-gray-900">EduTest</span>
           </div>
         </div>
       </header>
@@ -166,6 +191,13 @@ const CourseRecommendation = () => {
                 and will help you achieve your learning goals.
               </p>
             </div>
+
+            {/* Show message if no recommended courses for this level */}
+            {recommendedCourses.length === 0 && (
+              <div className="mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-center font-medium">
+                There are no courses for the moment matching your level.
+              </div>
+            )}
 
             {/* Horizontal slider for all recommended courses */}
             <Carousel className="relative w-full max-w-5xl mx-auto">
@@ -207,7 +239,7 @@ const CourseRecommendation = () => {
             )}
 
             {otherLevels.map((levelName) => {
-              const levelCourses = courses.filter(
+              const levelCourses = openCourses.filter(
                 (course) => course.level === levelName
               );
               if (levelCourses.length === 0) return null;

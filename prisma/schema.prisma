@@ -14,26 +14,28 @@ datasource db {
 }
 
 model Course {
-  id          Int      @id @default(autoincrement())
-  title       String
-  level       String
-  duration    String
-  description String?
-  instructor  String?
-  startDate   String
-  endDate     String
-  maxStudents Int?
-  location    String?
-  meetingTime String?
-  department  String
-  status      String
-  waitlist    Int?
-  startTime   String?
-  endTime     String?
-  term        String
-  year        Int
-  students    Int?
-  attachments Attachment[]
+  id               Int       @id @default(autoincrement())
+  title            String
+  level            String
+  duration         String
+  description      String?
+  instructor       String?
+  startDate        String
+  endDate          String
+  maxStudents      Int?
+  location         String?
+  meetingTime      String?
+  department       String
+  status           String
+  waitlist         Int       @default(0)
+  startTime        String?
+  endTime          String?
+  term             String
+  year             Int
+  students         Int?
+  enrolledStudents Student[] @relation("StudentCourses")
+  attachments      Attachment[]
+  requests         Request[]
 }
 
 model Attachment {
@@ -42,4 +44,35 @@ model Attachment {
   url       String
   course    Course @relation(fields: [courseId], references: [id])
   courseId  Int
+}
+
+model Request {
+  id         Int      @id @default(autoincrement())
+  firstName  String
+  lastName   String
+  email      String
+  phone      String
+  age        Int
+  comment    String?
+  course     Course   @relation(fields: [courseId], references: [id])
+  courseId   Int
+  createdAt  DateTime @default(now())
+  studentLevel String @default("Unknown")
+  status     String   @default("pending") // pending, approved, rejected
+  approvedDate DateTime?
+  rejectedDate DateTime?
+}
+
+model Student {
+  id              Int       @id @default(autoincrement())
+  firstName       String
+  lastName        String
+  email           String    @unique
+  phone           String
+  status          String    @default("active") // active, inactive
+  studentLevel    String
+  enrollmentDate  DateTime
+  approvedDate    DateTime?
+  enrolledCourses Course[]  @relation("StudentCourses")
+  enrolledCourseIds Int[]   @default([]) // Array of course IDs the student is enrolled in
 }
